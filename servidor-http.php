@@ -1,7 +1,6 @@
 <?php
 
 use Swoole\Http\{Request, Response, Server};
-use Swoole\Coroutine\Http\Client;
 
 Co::set(['hook_flags' => SWOOLE_HOOK_ALL]);
 
@@ -10,10 +9,10 @@ $servidor = new Server('0.0.0.0', 8080);
 $servidor->on('request', function (Request $request, Response $response) {
     $channel = new chan(2);
     go(function () use ($channel) {
-        $cliente = new Client('localhost', 8001);
-        $cliente->get('/servidor.php');
+        $curl = curl_init('http://localhost:8001/servidor.php');
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 
-        $conteudo = $cliente->getBody();
+        $conteudo = curl_exec($curl);
         $channel->push($conteudo);
     });
 
