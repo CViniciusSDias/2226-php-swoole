@@ -4,8 +4,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 ini_set('error_reporting', E_ALL);
 
-use Nyholm\Psr7\Factory\Psr17Factory;
-use Nyholm\Psr7Server\ServerRequestCreator;
+use Nyholm\Psr7\ServerRequest;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Swoole\Http\{Request, Response, Server};
@@ -41,17 +40,15 @@ $servidor->on(
         }*/
 
         $controllerClass = $rotas[$path];
-
-        $psr17Factory = new Psr17Factory();
-
-        $creator = new ServerRequestCreator(
-            $psr17Factory, // ServerRequestFactory
-            $psr17Factory, // UriFactory
-            $psr17Factory, // UploadedFileFactory
-            $psr17Factory  // StreamFactory
-        );
-
-        $serverRequest = $creator->fromGlobals();
+        $serverRequest = (new ServerRequest(
+            $request->getMethod(),
+            $request->server['request_uri'],
+            $request->header,
+            $request->getData(),
+            serverParams: $request->server
+        ))
+            ->withQueryParams($request->get ?? [])
+            ->withParsedBody($request->post ?? []);
 
         /** @var RequestHandlerInterface $controllerInstance */
         $controllerInstance = $container->get($controllerClass);
@@ -59,6 +56,11 @@ $servidor->on(
         $responsePsr7 = $controllerInstance->handle($serverRequest);
 
         foreach ($responsePsr7->getHeaders() as $header => $valores) {
+            if ($header === 'Location') {
+                $response->redirect($valores[0]);
+                return;
+            }
+
             foreach ($valores as $value) {
                 $response->header($header, $value);
             }
