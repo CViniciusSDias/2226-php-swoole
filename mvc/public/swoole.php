@@ -31,13 +31,24 @@ $servidor->on(
             return;
         }
 
-        /*session_start();
+        if (session_status() === PHP_SESSION_ACTIVE
+            && array_key_exists(session_name(), $request->cookie)
+            && session_id() !== $request->cookie[session_name()]
+        ) {
+            session_abort();
+            session_id($request->cookie[session_name()]);
+        }
+        
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+
         if (!isset($_SESSION['logado']) && stripos($path, 'login') === false) {
             $_SESSION['tipo_mensagem'] = 'danger';
             $_SESSION['mensagem_flash'] = 'Você não está logado';
-            header('Location: /login');
-            exit();
-        }*/
+            $response->redirect('/login');
+            return;
+        }
 
         $controllerClass = $rotas[$path];
         $serverRequest = (new ServerRequest(
